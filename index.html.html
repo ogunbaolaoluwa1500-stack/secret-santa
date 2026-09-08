@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Santa Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        body {
+            background-color: #020617; 
+            background-image: url("./IMG_3673.JPG");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        .bg-overlay {
+            background: rgba(2, 6, 23, 0.70);
+            backdrop-filter: blur(5px);
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen font-sans flex flex-col justify-between relative">
+
+    <div class="fixed inset-0 bg-overlay -z-10"></div>
+
+    <!-- Header -->
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base text-white tracking-tight">GiftMatch</h1>
+                    <p class="text-[11px] text-slate-400">Secret Santa Portal</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+                <button id="nav-participant-btn" onclick="switchPortal('participant')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition">
+                    Participant
+                </button>
+                <button id="nav-organizer-btn" onclick="switchPortal('organizer')" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                    Organizer
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
+
+        <!-- PARTICIPANT PORTAL -->
+        <section id="participant-portal" class="max-w-md mx-auto w-full">
+            
+            <!-- Login/Registration Form -->
+            <div id="participant-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div class="text-center mb-6">
+                    <h2 class="font-bold text-xl text-white">Participant Portal</h2>
+                    <p class="text-xs text-slate-400 mt-1">Set your password on first sign-in.</p>
+                </div>
+
+                <form id="participant-login-form" onsubmit="handleParticipantLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Your Full Name</label>
+                        <input type="text" id="participant-name-input" placeholder="e.g. Alice Vance" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-semibold text-slate-300">Your Personal Password</label>
+                            <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-rose-400 hover:underline">Forgot password?</button>
+                        </div>
+                        <input type="password" id="participant-password-input" placeholder="Create or enter password" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                    </div>
+
+                    <p id="participant-error-msg" class="text-xs text-rose-400 hidden text-center"></p>
+
+                    <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition text-sm">
+                        Unlock My Match
+                    </button>
+                </form>
+            </div>
+
+            <!-- Participant Dashboard -->
+            <div id="participant-dashboard" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+                    <div class="text-left">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Authenticated As</p>
+                        <h3 id="participant-greeting-name" class="text-sm font-bold text-white"></h3>
+                    </div>
+                    <div class="text-right">
+                        <span id="login-count-badge" class="text-[10px] bg-slate-800 text-amber-400 border border-slate-700 px-2 py-1 rounded-lg block mb-1">
+                            Logins used: 0
+                        </span>
+                        <button onclick="logoutParticipant()" class="text-xs text-slate-400 hover:text-white underline">Exit</button>
+                    </div>
+                </div>
+
+                <div class="perspective-1000 w-full max-w-xs mx-auto h-64 my-4 cursor-pointer" role="button" tabindex="0" aria-pressed="false" aria-label="Reveal Secret Santa assignment" onclick="toggleCardFlip()" onkeydown="handleCardKeydown(event)">
+                    <div id="flip-card-inner" class="relative w-full h-full transform-style-3d transition-transform duration-700">
+                        <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-rose-600 to-rose-900 border border-rose-400/30 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 text-white">
+                            <i class="fa-solid fa-gift text-5xl mb-3 text-amber-300"></i>
+                            <h4 class="font-bold text-lg">Secret Assignment</h4>
+                            <p class="text-xs text-rose-200 mt-2">Click card to flip and reveal</p>
+                        </div>
+                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 border border-slate-700 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6">
+                            <p class="text-xs text-slate-400">You are gifting to:</p>
+                            <h3 id="match-receiver-display" class="text-2xl font-black text-amber-400 my-2">---</h3>
+                            <p class="text-[10px] text-slate-500 mt-2">
+                                <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> Keep it confidential!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ORGANIZER PORTAL -->
+        <section id="organizer-portal" class="hidden max-w-2xl mx-auto w-full">
+            <div id="organizer-login-card" class="glass-panel rounded-3xl p-6 shadow-2xl max-w-md mx-auto">
+                <div class="text-center mb-6">
+                    <h2 class="font-bold text-xl text-white">Organizer Dashboard</h2>
+                    <p class="text-xs text-slate-400 mt-1">Administrative login</p>
+                </div>
+                <form onsubmit="handleOrganizerLogin(event)" class="space-y-4">
+                    <input type="password" id="organizer-password-input" placeholder="Enter organizer password" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition text-sm">
+                        Access Control Panel
+                    </button>
+                </form>
+            </div>
+
+            <div id="organizer-console" class="hidden space-y-6">
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <h3 class="font-bold text-sm text-white mb-3">Roster Management</h3>
+                    <form onsubmit="addParticipant(event)" class="flex gap-2 mb-4">
+                        <input type="text" id="new-participant-input" placeholder="Participant Name" required class="flex-grow bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
+                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-xs">Add</button>
+                    </form>
+
+                    <button onclick="generateDraw()" id="draw-btn" class="w-full bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-semibold py-2.5 rounded-xl text-xs shadow-lg">
+                        Generate Draw
+                    </button>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-bold text-sm text-white">Participant Roster</h3>
+                            <p class="text-[11px] text-slate-400">Manage access limits and passwords</p>
+                        </div>
+                        <button onclick="lockOrganizer()" class="text-xs text-slate-400 hover:text-white underline">Lock Panel</button>
+                    </div>
+
+                    <!-- Visibility Toggles -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                        <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-eye text-amber-400 text-xs"></i>
+                                <span class="text-xs font-semibold text-slate-200">Show Matches</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="show-matches-toggle" onchange="toggleMatchVisibility(this.checked)" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-key text-rose-400 text-xs"></i>
+                                <span class="text-xs font-semibold text-slate-200">Show Passwords</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="show-passwords-toggle" onchange="togglePasswordVisibility(this.checked)" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md py-4 text-center text-[11px] text-slate-400">
+        <p>GiftMatch Confidential Engine</p>
+    </footer>
+
+    <script>
+        // Client-side authentication is suitable only for a demo. Production access control
+        // must be enforced by a server with hashed passwords and authenticated requests.
+        const ORGANIZER_PASSWORD = "admin";
+        const DEFAULT_LOGIN_LIMIT = 2;
+        const MAX_NAME_LENGTH = 80;
+
+        function readStoredJson(key, fallback, validator = () => true) {
+            try {
+                const value = JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+                return validator(value) ? value : fallback;
+            } catch (error) {
+                console.warn(`Invalid stored data for ${key}; using defaults.`, error);
+                return fallback;
+            }
+        }
+
+        const isStringArray = value => Array.isArray(value) && value.every(item => typeof item === 'string');
+        const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+
+        let participants = readStoredJson('ss_participants', [], isStringArray);
+        let matches = readStoredJson('ss_matches', {}, isObject);
+        let logins = readStoredJson('ss_logins', {}, isObject);
+        let loginLimits = readStoredJson('ss_limits', {}, isObject);
+        let userPasswords = readStoredJson('ss_user_passwords', {}, isObject);
+        let showMatchesToOrganizer = readStoredJson('ss_show_matches', false, value => typeof value === 'boolean');
+        let showPasswordsToOrganizer = readStoredJson('ss_show_passwords', false, value => typeof value === 'boolean');
+        
+        let currentUser = null;
+        let isFlipped = false;
+
+        function saveState() {
+            localStorage.setItem('ss_participants', JSON.stringify(participants));
+            localStorage.setItem('ss_matches', JSON.stringify(matches));
+            localStorage.setItem('ss_logins', JSON.stringify(logins));
+            localStorage.setItem('ss_limits', JSON.stringify(loginLimits));
+            localStorage.setItem('ss_user_passwords', JSON.stringify(userPasswords));
+            localStorage.setItem('ss_show_matches', JSON.stringify(showMatchesToOrganizer));
+            localStorage.setItem('ss_show_passwords', JSON.stringify(showPasswordsToOrganizer));
+        }
+
+        function switchPortal(portal) {
+            const pPortal = document.getElementById('participant-portal');
+            const oPortal = document.getElementById('organizer-portal');
+            const pBtn = document.getElementById('nav-participant-btn');
+            const oBtn = document.getElementById('nav-organizer-btn');
+
+            if (portal === 'participant') {
+                pPortal.classList.remove('hidden');
+                oPortal.classList.add('hidden');
+                pBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition";
+                oBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+            } else {
+                pPortal.classList.add('hidden');
+                oPortal.classList.remove('hidden');
+                oBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition";
+                pBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+            }
+        }
+
+        function handleForgotPassword() {
+            const name = document.getElementById('participant-name-input').value.trim();
+            const errorMsg = document.getElementById('participant-error-msg');
+            
+            if (!name) {
+                errorMsg.innerText = "Please enter your full name first, then click 'Forgot password?'.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const existingName = participants.find(p => p.toLowerCase() === name.toLowerCase());
+            if (!existingName) {
+                errorMsg.innerText = "Name not found in participant roster.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (!userPasswords[existingName]) {
+                errorMsg.innerText = "You haven't set a password yet. Type any password to register.";
+                errorMsg.classList.remove('hidden');
+            } else {
+                alert(`Password request sent! Please contact the organizer to retrieve your password.`);
+            }
+        }
+
+        function handleParticipantLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('participant-name-input').value.trim();
+            const pass = document.getElementById('participant-password-input').value;
+            const errorMsg = document.getElementById('participant-error-msg');
+
+            errorMsg.classList.add('hidden');
+
+            if (!name || name.length > MAX_NAME_LENGTH || !pass || pass.length > 200) {
+                errorMsg.innerText = `Enter a valid name and password. Names must be ${MAX_NAME_LENGTH} characters or fewer.`;
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const existingName = participants.find(p => p.toLowerCase() === name.toLowerCase());
+            if (!existingName) {
+                errorMsg.innerText = "Name not found in participant roster. Please ask organizer to add you.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (!userPasswords[existingName]) {
+                userPasswords[existingName] = pass;
+                saveState();
+            } else if (userPasswords[existingName] !== pass) {
+                errorMsg.innerText = "Incorrect password for this account.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const currentLogins = logins[existingName] || 0;
+            const allowedLimit = loginLimits[existingName] !== undefined ? loginLimits[existingName] : 2;
+
+            if (currentLogins >= allowedLimit) {
+                errorMsg.innerText = `Login limit reached (${currentLogins}/${allowedLimit}). Contact organizer for access.`;
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            logins[existingName] = currentLogins + 1;
+            currentUser = existingName;
+            saveState();
+
+            document.getElementById('participant-login-card').classList.add('hidden');
+            document.getElementById('participant-dashboard').classList.remove('hidden');
+            document.getElementById('participant-greeting-name').innerText = currentUser;
+            document.getElementById('login-count-badge').innerText = `Logins used: ${logins[currentUser]}/${allowedLimit}`;
+
+            const receiver = matches[currentUser] || "Draw not generated yet";
+            document.getElementById('match-receiver-display').innerText = receiver;
+        }
+
+        function toggleCardFlip() {
+            const card = document.querySelector('.perspective-1000');
+            const cardInner = document.getElementById('flip-card-inner');
+            isFlipped = !isFlipped;
+            cardInner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            card.setAttribute('aria-pressed', String(isFlipped));
+            card.setAttribute('aria-label', isFlipped ? 'Hide Secret Santa assignment' : 'Reveal Secret Santa assignment');
+        }
+
+        function handleCardKeydown(event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleCardFlip();
+            }
+        }
+
+        function logoutParticipant() {
+            currentUser = null;
+            isFlipped = false;
+            document.getElementById('flip-card-inner').style.transform = 'rotateY(0deg)';
+            document.getElementById('participant-login-card').classList.remove('hidden');
+            document.getElementById('participant-dashboard').classList.add('hidden');
+            document.getElementById('participant-name-input').value = '';
+            document.getElementById('participant-password-input').value = '';
+        }
+
+        function handleOrganizerLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('organizer-password-input').value;
+            if (pass === ORGANIZER_PASSWORD) {
+                document.getElementById('organizer-login-card').classList.add('hidden');
+                document.getElementById('organizer-console').classList.remove('hidden');
+                document.getElementById('show-matches-toggle').checked = showMatchesToOrganizer;
+                document.getElementById('show-passwords-toggle').checked = showPasswordsToOrganizer;
+                renderRoster();
+            } else {
+                alert("Incorrect organizer password.");
+            }
+        }
+
+        function lockOrganizer() {
+            document.getElementById('organizer-login-card').classList.remove('hidden');
+            document.getElementById('organizer-console').classList.add('hidden');
+            document.getElementById('organizer-password-input').value = '';
+        }
+
+        function toggleMatchVisibility(checked) {
+            showMatchesToOrganizer = checked;
+            saveState();
+            renderRoster();
+        }
+
+        function togglePasswordVisibility(checked) {
+            showPasswordsToOrganizer = checked;
+            saveState();
+            renderRoster();
+        }
+
+        function addParticipant(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-participant-input');
+            const name = input.value.trim().replace(/\s+/g, ' ');
+            const alreadyExists = participants.some(p => p.toLowerCase() === name.toLowerCase());
+
+            if (name.length > MAX_NAME_LENGTH) {
+                alert(`Participant names must be ${MAX_NAME_LENGTH} characters or fewer.`);
+                return;
+            }
+
+            if (name && !alreadyExists) {
+                participants.push(name);
+                if (loginLimits[name] === undefined) loginLimits[name] = 2;
+                saveState();
+                renderRoster();
+                input.value = '';
+            }
+        }
+
+        function removeParticipant(name) {
+            participants = participants.filter(p => p !== name);
+            delete logins[name];
+            delete loginLimits[name];
+            delete userPasswords[name];
+            delete matches[name];
+
+            // Remove references to the deleted participant from any existing draw.
+            Object.keys(matches).forEach(giver => {
+                if (matches[giver] === name) delete matches[giver];
+            });
+
+            saveState();
+            renderRoster();
+        }
+
+        function resetUserPassword(name) {
+            delete userPasswords[name];
+            saveState();
+            renderRoster();
+            alert(`Password cleared for ${name}. They can now create a new password on login.`);
+        }
+
+        function adjustLoginLimit(name, amount) {
+            const currentLimit = loginLimits[name] !== undefined ? loginLimits[name] : 2;
+            loginLimits[name] = Math.max(0, currentLimit + amount);
+            saveState();
+            renderRoster();
+        }
+
+        function generateDraw() {
+            if (participants.length < 2) {
+                alert("Need at least 2 participants.");
+                return;
+            }
+
+            // A non-zero cyclic shift is a guaranteed derangement: nobody gets themselves.
+            const shift = 1 + Math.floor(Math.random() * (participants.length - 1));
+            const result = {};
+            participants.forEach((participant, index) => {
+                result[participant] = participants[(index + shift) % participants.length];
+            });
+
+            matches = result;
+            saveState();
+            renderRoster();
+            alert("Secret Santa draw generated successfully!");
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>'"]/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[character]));
+        }
+
+        function renderRoster() {
+            const list = document.getElementById('roster-list');
+            list.innerHTML = '';
+
+            if (participants.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-500">No participants added.</p>`;
+                return;
+            }
+
+            participants.forEach(name => {
+                const used = logins[name] || 0;
+                const allowed = loginLimits[name] !== undefined ? loginLimits[name] : 2;
+                const assignedTo = matches[name] || 'Not drawn';
+                const userPass = userPasswords[name];
+
+                const safeName = escapeHtml(name);
+                const safeAssignedTo = escapeHtml(assignedTo);
+                const safePassword = escapeHtml(userPass || 'None');
+                const encodedName = encodeURIComponent(name);
+
+                const matchInfoHtml = showMatchesToOrganizer 
+                    ? `<span class="text-[11px] text-amber-400 font-medium mr-2">Gifting: ${safeAssignedTo}</span>`
+                    : '';
+
+                const passwordInfoHtml = showPasswordsToOrganizer
+                    ? `<span class="text-[11px] text-rose-300 font-mono bg-rose-950/60 border border-rose-800/80 px-2 py-0.5 rounded mr-2">Pass: ${safePassword}</span>`
+                    : '';
+
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-xs";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-slate-200">${safeName}</span>
+                        ${userPass ? '<span class="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">Set</span>' : '<span class="text-[9px] bg-slate-900 text-slate-500 px-1.5 py-0.5 rounded">Unregistered</span>'}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${matchInfoHtml}
+                        ${passwordInfoHtml}
+                        <span class="text-[11px] text-slate-400">Logins: ${used}/${allowed}</span>
+                        <div class="flex items-center gap-1">
+                            <button data-action="increase-limit" data-name="${encodedName}" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded">+1 Limit</button>
+                            ${userPass ? `<button data-action="reset-password" data-name="${encodedName}" class="px-2 py-0.5 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded">Reset</button>` : ''}
+                            <button data-action="remove" data-name="${encodedName}" class="px-2 py-0.5 bg-rose-950 hover:bg-rose-900 text-rose-400 rounded">Remove</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        document.getElementById('roster-list').addEventListener('click', event => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+
+            const name = decodeURIComponent(button.dataset.name);
+            switch (button.dataset.action) {
+                case 'increase-limit':
+                    adjustLoginLimit(name, 1);
+                    break;
+                case 'reset-password':
+                    resetUserPassword(name);
+                    break;
+                case 'remove':
+                    removeParticipant(name);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
