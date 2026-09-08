@@ -206,8 +206,6 @@
     </footer>
 
     <script>
-        // Client-side authentication is suitable only for a demo. Production access control
-        // must be enforced by a server with hashed passwords and authenticated requests.
         const ORGANIZER_PASSWORD = "admin";
         const DEFAULT_LOGIN_LIMIT = 2;
         const MAX_NAME_LENGTH = 80;
@@ -427,7 +425,6 @@
             delete userPasswords[name];
             delete matches[name];
 
-            // Remove references to the deleted participant from any existing draw.
             Object.keys(matches).forEach(giver => {
                 if (matches[giver] === name) delete matches[giver];
             });
@@ -456,7 +453,6 @@
                 return;
             }
 
-            // A non-zero cyclic shift is a guaranteed derangement: nobody gets themselves.
             const shift = 1 + Math.floor(Math.random() * (participants.length - 1));
             const result = {};
             participants.forEach((participant, index) => {
@@ -546,6 +542,9 @@
                     break;
             }
         });
+
+        // Initialize roster view on startup
+        renderRoster();
     </script>
 </body>
 </html>
