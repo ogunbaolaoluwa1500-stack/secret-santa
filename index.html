@@ -4,15 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secret Santa Portal</title>
+    
+    <!-- Tailwind CSS CDN for utility-first styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome CDN for UI Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Custom CSS properties for 3D card flip animation */
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
         
+        /* Global Background Styling with Image and Fallback Overlay */
         body {
             background-color: #020617; 
             background-image: url("./IMG_3673.JPG");
@@ -22,25 +28,64 @@
             background-attachment: fixed;
         }
 
+        /* Dark Backdrop Overlay for Contrast */
         .bg-overlay {
             background: rgba(2, 6, 23, 0.70);
             backdrop-filter: blur(5px);
         }
 
+        /* Glassmorphism Styling for Cards and Panels */
         .glass-panel {
             background: rgba(15, 23, 42, 0.88);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
     </style>
+
+    <!-- ================================================================= -->
+    <!-- FIREBASE MODULE SDK SETUP & INITIALIZATION                        -->
+    <!-- ================================================================= -->
+    <script type="module">
+        // Import Firebase App core and Firestore module functions from official CDN
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Web App Configuration credentials retrieved from console
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-KwaeH5vyfeLBJz748UOCwKFA_1pyCq4",
+            authDomain: "secret-santa-d1ca8.firebaseapp.com",
+            projectId: "secret-santa-d1ca8",
+            storageBucket: "secret-santa-d1ca8.firebasestorage.app",
+            messagingSenderId: "53036018396",
+            appId: "1:53036018396:web:b286cce6d0c14d4f9f2219",
+            measurementId: "G-HZ0VJ60G4L"
+        };
+
+        // Initialize Firebase Application Instance
+        const app = initializeApp(firebaseConfig);
+        
+        // Initialize Firestore Cloud Database Instance
+        const db = getFirestore(app);
+
+        // Expose Firebase Database tools to global `window` object 
+        // Allows non-module standard scripts to perform Firestore database queries
+        window.db = db;
+        window.fs = { doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection };
+    </script>
 </head>
 <body class="text-slate-100 min-h-screen font-sans flex flex-col justify-between relative">
 
+    <!-- Ambient Dark Overlay Filter -->
     <div class="fixed inset-0 bg-overlay -z-10"></div>
 
-    <!-- Header -->
+    <!-- ================================================================= -->
+    <!-- NAVIGATION / HEADER SECTION                                       -->
+    <!-- ================================================================= -->
     <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
+            <!-- App Logo & Title -->
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
                     <i class="fa-solid fa-gift"></i>
@@ -51,6 +96,7 @@
                 </div>
             </div>
 
+            <!-- Portal Switcher Buttons (Participant vs Organizer view) -->
             <div class="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
                 <button id="nav-participant-btn" onclick="switchPortal('participant')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition">
                     Participant
@@ -62,18 +108,24 @@
         </div>
     </header>
 
+    <!-- ================================================================= -->
+    <!-- MAIN CONTENT CONTAINER                                            -->
+    <!-- ================================================================= -->
     <main class="max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
 
-        <!-- PARTICIPANT PORTAL -->
+        <!-- ============================================================= -->
+        <!-- PARTICIPANT PORTAL SECTION                                    -->
+        <!-- ============================================================= -->
         <section id="participant-portal" class="max-w-md mx-auto w-full">
             
-            <!-- Login/Registration Form -->
+            <!-- Participant Login/Registration Card -->
             <div id="participant-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
                 <div class="text-center mb-6">
                     <h2 class="font-bold text-xl text-white">Participant Portal</h2>
                     <p class="text-xs text-slate-400 mt-1">Set your password on first sign-in.</p>
                 </div>
 
+                <!-- Form submitting to `handleParticipantLogin` -->
                 <form id="participant-login-form" onsubmit="handleParticipantLogin(event)" class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1.5">Your Full Name</label>
@@ -87,6 +139,7 @@
                         <input type="password" id="participant-password-input" placeholder="Create or enter password" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
                     </div>
 
+                    <!-- Dynamic Error Message Container -->
                     <p id="participant-error-msg" class="text-xs text-rose-400 hidden text-center"></p>
 
                     <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition text-sm">
@@ -95,8 +148,9 @@
                 </form>
             </div>
 
-            <!-- Participant Dashboard -->
+            <!-- Participant Dashboard (Visible only after successful login) -->
             <div id="participant-dashboard" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+                <!-- User Status Bar -->
                 <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
                     <div class="text-left">
                         <p class="text-[10px] uppercase font-bold text-slate-400">Authenticated As</p>
@@ -110,13 +164,16 @@
                     </div>
                 </div>
 
+                <!-- 3D Flip Card Element for Reveal Effect -->
                 <div class="perspective-1000 w-full max-w-xs mx-auto h-64 my-4 cursor-pointer" role="button" tabindex="0" aria-pressed="false" aria-label="Reveal Secret Santa assignment" onclick="toggleCardFlip()" onkeydown="handleCardKeydown(event)">
                     <div id="flip-card-inner" class="relative w-full h-full transform-style-3d transition-transform duration-700">
+                        <!-- Card Front (Unrevealed State) -->
                         <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-rose-600 to-rose-900 border border-rose-400/30 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 text-white">
                             <i class="fa-solid fa-gift text-5xl mb-3 text-amber-300"></i>
                             <h4 class="font-bold text-lg">Secret Assignment</h4>
                             <p class="text-xs text-rose-200 mt-2">Click card to flip and reveal</p>
                         </div>
+                        <!-- Card Back (Revealed State) -->
                         <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 border border-slate-700 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6">
                             <p class="text-xs text-slate-400">You are gifting to:</p>
                             <h3 id="match-receiver-display" class="text-2xl font-black text-amber-400 my-2">---</h3>
@@ -130,8 +187,11 @@
 
         </section>
 
-        <!-- ORGANIZER PORTAL -->
+        <!-- ============================================================= -->
+        <!-- ORGANIZER PORTAL SECTION                                      -->
+        <!-- ============================================================= -->
         <section id="organizer-portal" class="hidden max-w-2xl mx-auto w-full">
+            <!-- Admin Login Card -->
             <div id="organizer-login-card" class="glass-panel rounded-3xl p-6 shadow-2xl max-w-md mx-auto">
                 <div class="text-center mb-6">
                     <h2 class="font-bold text-xl text-white">Organizer Dashboard</h2>
@@ -145,7 +205,9 @@
                 </form>
             </div>
 
+            <!-- Organizer Console (Visible upon correct password) -->
             <div id="organizer-console" class="hidden space-y-6">
+                <!-- Add Participant & Generate Draw Control -->
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <h3 class="font-bold text-sm text-white mb-3">Roster Management</h3>
                     <form onsubmit="addParticipant(event)" class="flex gap-2 mb-4">
@@ -158,6 +220,7 @@
                     </button>
                 </div>
 
+                <!-- Admin Roster Management List -->
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
                         <div>
@@ -167,8 +230,9 @@
                         <button onclick="lockOrganizer()" class="text-xs text-slate-400 hover:text-white underline">Lock Panel</button>
                     </div>
 
-                    <!-- Visibility Toggles -->
+                    <!-- Admin Visibility Toggles -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                        <!-- Match Revealer Toggle -->
                         <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-eye text-amber-400 text-xs"></i>
@@ -180,6 +244,7 @@
                             </label>
                         </div>
 
+                        <!-- Password Revealer Toggle -->
                         <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-key text-rose-400 text-xs"></i>
@@ -192,8 +257,9 @@
                         </div>
                     </div>
 
+                    <!-- Dynamic Roster Target Container -->
                     <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto">
-                        <!-- Populated dynamically -->
+                        <!-- Content dynamically generated from Firestore by `renderRoster()` -->
                     </div>
                 </div>
             </div>
@@ -201,49 +267,67 @@
 
     </main>
 
+    <!-- Footer -->
     <footer class="border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md py-4 text-center text-[11px] text-slate-400">
         <p>GiftMatch Confidential Engine</p>
     </footer>
 
+    <!-- ================================================================= -->
+    <!-- APPLICATION LOGIC & FIRESTORE DATABASE CONTROLLER                 -->
+    <!-- ================================================================= -->
     <script>
-        const ORGANIZER_PASSWORD = "admin";
-        const DEFAULT_LOGIN_LIMIT = 2;
-        const MAX_NAME_LENGTH = 80;
+        // Global Constants
+        const ORGANIZER_PASSWORD = "admin"; // Admin access key
+        const MAX_NAME_LENGTH = 80;        // Security length check for participant names
 
-        function readStoredJson(key, fallback, validator = () => true) {
-            try {
-                const value = JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
-                return validator(value) ? value : fallback;
-            } catch (error) {
-                console.warn(`Invalid stored data for ${key}; using defaults.`, error);
-                return fallback;
-            }
+        // Application State
+        let participantsList = [];          // Local cache synchronized with Firestore
+        let showMatchesToOrganizer = false; // State toggle for admin match view
+        let showPasswordsToOrganizer = false;// State toggle for admin password view
+        let currentUser = null;             // Active logged-in participant ID
+        let isFlipped = false;               // Visual state for 3D card animation
+
+        /**
+         * Initialize real-time synchronization once Firebase SDK finishes loading.
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            const checkFirebase = setInterval(() => {
+                if (window.db && window.fs) {
+                    clearInterval(checkFirebase);
+                    initRealtimeSync();
+                }
+            }, 100);
+        });
+
+        /**
+         * Attaches a real-time Firestore listener (`onSnapshot`) to the `participants` collection.
+         * Whenever data changes in the cloud, all connected browser clients automatically update instantly.
+         */
+        function initRealtimeSync() {
+            window.fs.onSnapshot(window.fs.collection(window.db, "participants"), (snapshot) => {
+                participantsList = [];
+                snapshot.forEach(doc => {
+                    participantsList.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Re-render admin UI controls
+                renderRoster();
+                
+                // Update active user dashboard data in real-time if logged in
+                if (currentUser) {
+                    const userData = participantsList.find(p => p.id === currentUser);
+                    if (userData) {
+                        const match = userData.giftingTo || "Draw not generated yet";
+                        document.getElementById('match-receiver-display').innerText = match;
+                        document.getElementById('login-count-badge').innerText = `Logins used: ${userData.logins}/${userData.loginLimit}`;
+                    }
+                }
+            });
         }
 
-        const isStringArray = value => Array.isArray(value) && value.every(item => typeof item === 'string');
-        const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
-
-        let participants = readStoredJson('ss_participants', [], isStringArray);
-        let matches = readStoredJson('ss_matches', {}, isObject);
-        let logins = readStoredJson('ss_logins', {}, isObject);
-        let loginLimits = readStoredJson('ss_limits', {}, isObject);
-        let userPasswords = readStoredJson('ss_user_passwords', {}, isObject);
-        let showMatchesToOrganizer = readStoredJson('ss_show_matches', false, value => typeof value === 'boolean');
-        let showPasswordsToOrganizer = readStoredJson('ss_show_passwords', false, value => typeof value === 'boolean');
-        
-        let currentUser = null;
-        let isFlipped = false;
-
-        function saveState() {
-            localStorage.setItem('ss_participants', JSON.stringify(participants));
-            localStorage.setItem('ss_matches', JSON.stringify(matches));
-            localStorage.setItem('ss_logins', JSON.stringify(logins));
-            localStorage.setItem('ss_limits', JSON.stringify(loginLimits));
-            localStorage.setItem('ss_user_passwords', JSON.stringify(userPasswords));
-            localStorage.setItem('ss_show_matches', JSON.stringify(showMatchesToOrganizer));
-            localStorage.setItem('ss_show_passwords', JSON.stringify(showPasswordsToOrganizer));
-        }
-
+        /**
+         * Switches active navigation tab between Participant and Organizer portals.
+         */
         function switchPortal(portal) {
             const pPortal = document.getElementById('participant-portal');
             const oPortal = document.getElementById('organizer-portal');
@@ -263,7 +347,10 @@
             }
         }
 
-        function handleForgotPassword() {
+        /**
+         * Forgot Password handling for participants.
+         */
+        async function handleForgotPassword() {
             const name = document.getElementById('participant-name-input').value.trim();
             const errorMsg = document.getElementById('participant-error-msg');
             
@@ -273,53 +360,62 @@
                 return;
             }
 
-            const existingName = participants.find(p => p.toLowerCase() === name.toLowerCase());
-            if (!existingName) {
+            const target = participantsList.find(p => p.id.toLowerCase() === name.toLowerCase());
+            if (!target) {
                 errorMsg.innerText = "Name not found in participant roster.";
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            if (!userPasswords[existingName]) {
+            if (!target.password) {
                 errorMsg.innerText = "You haven't set a password yet. Type any password to register.";
                 errorMsg.classList.remove('hidden');
             } else {
-                alert(`Password request sent! Please contact the organizer to retrieve your password.`);
+                alert("Password request sent! Please contact the organizer to retrieve or reset your password.");
             }
         }
 
-        function handleParticipantLogin(e) {
+        /**
+         * Handles authentication, password registration, and access limits for participants.
+         */
+        async function handleParticipantLogin(e) {
             e.preventDefault();
-            const name = document.getElementById('participant-name-input').value.trim();
-            const pass = document.getElementById('participant-password-input').value;
+            const nameInput = document.getElementById('participant-name-input').value.trim();
+            const passInput = document.getElementById('participant-password-input').value;
             const errorMsg = document.getElementById('participant-error-msg');
 
             errorMsg.classList.add('hidden');
 
-            if (!name || name.length > MAX_NAME_LENGTH || !pass || pass.length > 200) {
+            // Sanity & input length checks
+            if (!nameInput || nameInput.length > MAX_NAME_LENGTH || !passInput) {
                 errorMsg.innerText = `Enter a valid name and password. Names must be ${MAX_NAME_LENGTH} characters or fewer.`;
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            const existingName = participants.find(p => p.toLowerCase() === name.toLowerCase());
-            if (!existingName) {
+            // Verify user exists in roster cache
+            const userData = participantsList.find(p => p.id.toLowerCase() === nameInput.toLowerCase());
+            if (!userData) {
                 errorMsg.innerText = "Name not found in participant roster. Please ask organizer to add you.";
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            if (!userPasswords[existingName]) {
-                userPasswords[existingName] = pass;
-                saveState();
-            } else if (userPasswords[existingName] !== pass) {
+            const docRef = window.fs.doc(window.db, "participants", userData.id);
+
+            // Register password on first login attempt
+            if (!userData.password) {
+                await window.fs.updateDoc(docRef, { password: passInput });
+                userData.password = passInput;
+            } else if (userData.password !== passInput) {
                 errorMsg.innerText = "Incorrect password for this account.";
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            const currentLogins = logins[existingName] || 0;
-            const allowedLimit = loginLimits[existingName] !== undefined ? loginLimits[existingName] : 2;
+            // Login attempt limit checks
+            const currentLogins = userData.logins || 0;
+            const allowedLimit = userData.loginLimit !== undefined ? userData.loginLimit : 2;
 
             if (currentLogins >= allowedLimit) {
                 errorMsg.innerText = `Login limit reached (${currentLogins}/${allowedLimit}). Contact organizer for access.`;
@@ -327,19 +423,23 @@
                 return;
             }
 
-            logins[existingName] = currentLogins + 1;
-            currentUser = existingName;
-            saveState();
+            // Increment login counter in Firestore Cloud Database
+            await window.fs.updateDoc(docRef, { logins: currentLogins + 1 });
+            currentUser = userData.id;
 
+            // Update UI views
             document.getElementById('participant-login-card').classList.add('hidden');
             document.getElementById('participant-dashboard').classList.remove('hidden');
             document.getElementById('participant-greeting-name').innerText = currentUser;
-            document.getElementById('login-count-badge').innerText = `Logins used: ${logins[currentUser]}/${allowedLimit}`;
+            document.getElementById('login-count-badge').innerText = `Logins used: ${currentLogins + 1}/${allowedLimit}`;
 
-            const receiver = matches[currentUser] || "Draw not generated yet";
+            const receiver = userData.giftingTo || "Draw not generated yet";
             document.getElementById('match-receiver-display').innerText = receiver;
         }
 
+        /**
+         * Toggles the CSS 3D transformation for the secret assignment reveal card.
+         */
         function toggleCardFlip() {
             const card = document.querySelector('.perspective-1000');
             const cardInner = document.getElementById('flip-card-inner');
@@ -349,6 +449,9 @@
             card.setAttribute('aria-label', isFlipped ? 'Hide Secret Santa assignment' : 'Reveal Secret Santa assignment');
         }
 
+        /**
+         * Keyboard accessibility handler for 3D card flip action.
+         */
         function handleCardKeydown(event) {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
@@ -356,6 +459,9 @@
             }
         }
 
+        /**
+         * Log out the active participant and return to login screen.
+         */
         function logoutParticipant() {
             currentUser = null;
             isFlipped = false;
@@ -366,6 +472,9 @@
             document.getElementById('participant-password-input').value = '';
         }
 
+        /**
+         * Authenticate organizer control panel access.
+         */
         function handleOrganizerLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('organizer-password-input').value;
@@ -380,91 +489,132 @@
             }
         }
 
+        /**
+         * Lock organizer control panel.
+         */
         function lockOrganizer() {
             document.getElementById('organizer-login-card').classList.remove('hidden');
             document.getElementById('organizer-console').classList.add('hidden');
             document.getElementById('organizer-password-input').value = '';
         }
 
+        /**
+         * Toggle visibility of participant assignments in organizer view.
+         */
         function toggleMatchVisibility(checked) {
             showMatchesToOrganizer = checked;
-            saveState();
             renderRoster();
         }
 
+        /**
+         * Toggle visibility of participant passwords in organizer view.
+         */
         function togglePasswordVisibility(checked) {
             showPasswordsToOrganizer = checked;
-            saveState();
             renderRoster();
         }
 
-        function addParticipant(e) {
+        /**
+         * Writes a new participant document into Firestore database.
+         */
+        async function addParticipant(e) {
             e.preventDefault();
             const input = document.getElementById('new-participant-input');
             const name = input.value.trim().replace(/\s+/g, ' ');
-            const alreadyExists = participants.some(p => p.toLowerCase() === name.toLowerCase());
 
             if (name.length > MAX_NAME_LENGTH) {
                 alert(`Participant names must be ${MAX_NAME_LENGTH} characters or fewer.`);
                 return;
             }
 
-            if (name && !alreadyExists) {
-                participants.push(name);
-                if (loginLimits[name] === undefined) loginLimits[name] = 2;
-                saveState();
-                renderRoster();
+            const exists = participantsList.some(p => p.id.toLowerCase() === name.toLowerCase());
+            if (exists) {
+                alert("Participant already exists.");
+                return;
+            }
+
+            if (name) {
+                // Write new document to Cloud Firestore
+                await window.fs.setDoc(window.fs.doc(window.db, "participants", name), {
+                    name: name,
+                    logins: 0,
+                    loginLimit: 2,
+                    password: null,
+                    giftingTo: null
+                });
                 input.value = '';
             }
         }
 
-        function removeParticipant(name) {
-            participants = participants.filter(p => p !== name);
-            delete logins[name];
-            delete loginLimits[name];
-            delete userPasswords[name];
-            delete matches[name];
-
-            Object.keys(matches).forEach(giver => {
-                if (matches[giver] === name) delete matches[giver];
-            });
-
-            saveState();
-            renderRoster();
+        /**
+         * Deletes a participant document from Firestore and clears related match assignments.
+         */
+        async function removeParticipant(name) {
+            // Delete participant document from Cloud Firestore
+            await window.fs.deleteDoc(window.fs.doc(window.db, "participants", name));
+            
+            // Clean up assignment reference if someone was matched to the deleted participant
+            for (const p of participantsList) {
+                if (p.giftingTo === name) {
+                    await window.fs.updateDoc(window.fs.doc(window.db, "participants", p.id), {
+                        giftingTo: null
+                    });
+                }
+            }
         }
 
-        function resetUserPassword(name) {
-            delete userPasswords[name];
-            saveState();
-            renderRoster();
+        /**
+         * Clears a participant's password in Firestore so they can set a new one.
+         */
+        async function resetUserPassword(name) {
+            await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), {
+                password: null
+            });
             alert(`Password cleared for ${name}. They can now create a new password on login.`);
         }
 
-        function adjustLoginLimit(name, amount) {
-            const currentLimit = loginLimits[name] !== undefined ? loginLimits[name] : 2;
-            loginLimits[name] = Math.max(0, currentLimit + amount);
-            saveState();
-            renderRoster();
+        /**
+         * Increases a participant's allowed login limit in Firestore.
+         */
+        async function adjustLoginLimit(name, amount) {
+            const target = participantsList.find(p => p.id === name);
+            if (target) {
+                const currentLimit = target.loginLimit !== undefined ? target.loginLimit : 2;
+                await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), {
+                    loginLimit: Math.max(0, currentLimit + amount)
+                });
+            }
         }
 
-        function generateDraw() {
-            if (participants.length < 2) {
+        /**
+         * Generates Secret Santa draw mapping using a circular shift algorithm,
+         * updating every participant's document in Cloud Firestore.
+         */
+        async function generateDraw() {
+            if (participantsList.length < 2) {
                 alert("Need at least 2 participants.");
                 return;
             }
 
-            const shift = 1 + Math.floor(Math.random() * (participants.length - 1));
-            const result = {};
-            participants.forEach((participant, index) => {
-                result[participant] = participants[(index + shift) % participants.length];
-            });
+            const names = participantsList.map(p => p.id);
+            // Derive a random shift distance guaranteed not to match a person to themselves
+            const shift = 1 + Math.floor(Math.random() * (names.length - 1));
 
-            matches = result;
-            saveState();
-            renderRoster();
+            // Assign every participant their shifted recipient
+            for (let i = 0; i < names.length; i++) {
+                const giver = names[i];
+                const receiver = names[(i + shift) % names.length];
+                await window.fs.updateDoc(window.fs.doc(window.db, "participants", giver), {
+                    giftingTo: receiver
+                });
+            }
+
             alert("Secret Santa draw generated successfully!");
         }
 
+        /**
+         * Sanitizes string output against Cross-Site Scripting (XSS) vulnerabilities.
+         */
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, character => ({
                 '&': '&amp;',
@@ -475,20 +625,26 @@
             }[character]));
         }
 
+        /**
+         * Dynamic DOM renderer for Organizer Participant Roster table.
+         */
         function renderRoster() {
             const list = document.getElementById('roster-list');
+            if (!list) return;
             list.innerHTML = '';
 
-            if (participants.length === 0) {
+            if (participantsList.length === 0) {
                 list.innerHTML = `<p class="text-xs text-slate-500">No participants added.</p>`;
                 return;
             }
 
-            participants.forEach(name => {
-                const used = logins[name] || 0;
-                const allowed = loginLimits[name] !== undefined ? loginLimits[name] : 2;
-                const assignedTo = matches[name] || 'Not drawn';
-                const userPass = userPasswords[name];
+            // Loop through active cache and construct UI elements
+            participantsList.forEach(item => {
+                const name = item.id;
+                const used = item.logins || 0;
+                const allowed = item.loginLimit !== undefined ? item.loginLimit : 2;
+                const assignedTo = item.giftingTo || 'Not drawn';
+                const userPass = item.password;
 
                 const safeName = escapeHtml(name);
                 const safeAssignedTo = escapeHtml(assignedTo);
@@ -525,6 +681,9 @@
             });
         }
 
+        /**
+         * Event Delegation Handler for participant action buttons in Organizer Roster list.
+         */
         document.getElementById('roster-list').addEventListener('click', event => {
             const button = event.target.closest('button[data-action]');
             if (!button) return;
@@ -542,9 +701,6 @@
                     break;
             }
         });
-
-        // Initialize roster view on startup
-        renderRoster();
     </script>
 </body>
 </html>
