@@ -4,19 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secret Santa Portal</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
+
     <style>
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
-        
+
         body {
-            background-color: #020617; 
+            background-color: #020617;
             background-image: url("./IMG_3673.JPG");
             background-size: cover;
             background-position: center center;
@@ -25,7 +25,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated Changing Background Gradient Overlay */
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -33,10 +32,10 @@
         }
 
         .bg-overlay {
-            background: linear-gradient(-45deg, 
-                rgba(15, 23, 42, 0.88), 
-                rgba(136, 19, 55, 0.75), 
-                rgba(2, 6, 23, 0.9), 
+            background: linear-gradient(-45deg,
+                rgba(15, 23, 42, 0.88),
+                rgba(136, 19, 55, 0.75),
+                rgba(2, 6, 23, 0.9),
                 rgba(20, 83, 45, 0.75)
             );
             background-size: 400% 400%;
@@ -44,7 +43,6 @@
             backdrop-filter: blur(8px);
         }
 
-        /* Spotlight Glass Panel Effect */
         .glass-panel {
             background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(20px);
@@ -54,7 +52,6 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         }
 
-        /* Interactive Spotlight Glow Effect on Hover */
         .glass-panel::before, .spotlight-element::before {
             content: '';
             position: absolute;
@@ -97,7 +94,6 @@
             animation: float 4s ease-in-out infinite;
         }
 
-        /* Custom Interactive Spotlight for Inputs & Items */
         .interactive-hover {
             transition: all 0.2s ease;
         }
@@ -106,12 +102,54 @@
             box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
             transform: scale(1.01);
         }
+
+        .nav-btn {
+            padding: 0.375rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            transition: color 0.2s ease;
+        }
+        .nav-btn:hover { color: #fff; }
+        .nav-btn.active {
+            background-image: linear-gradient(to right, #e11d48, #d97706);
+            color: #fff;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 90%;
+            max-width: 24rem;
+        }
+        .toast {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            animation: toastIn 0.2s ease;
+        }
+        .toast.error { background: rgba(76, 5, 25, 0.95); color: #fca5a5; border: 1px solid rgba(225,29,72,0.5); }
+        .toast.success { background: rgba(6, 46, 33, 0.95); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.5); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { 
-            getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection 
+        import {
+            getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -134,8 +172,7 @@
 <body class="text-slate-100 min-h-screen font-sans flex flex-col justify-between relative selection:bg-rose-500 selection:text-white">
 
     <div class="fixed inset-0 bg-overlay -z-10"></div>
-    
-    <!-- Dynamic Floating Background Icons -->
+
     <div class="fixed top-12 left-10 text-rose-500/20 text-9xl pointer-events-none -z-10 animate-float">
         <i class="fa-solid fa-snowflake"></i>
     </div>
@@ -161,12 +198,8 @@
             </div>
 
             <div class="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-                <button id="nav-participant-btn" onclick="switchPortal('participant')" class="px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110">
-                    Participant
-                </button>
-                <button id="nav-organizer-btn" onclick="switchPortal('organizer')" class="px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition">
-                    Organizer
-                </button>
+                <button id="nav-participant-btn" onclick="switchPortal('participant')" class="nav-btn active">Participant</button>
+                <button id="nav-organizer-btn" onclick="switchPortal('organizer')" class="nav-btn">Organizer</button>
             </div>
         </div>
     </header>
@@ -174,7 +207,7 @@
     <main class="max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
 
         <section id="participant-portal" class="max-w-md mx-auto w-full">
-            
+
             <div id="participant-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl relative">
                 <div class="text-center mb-6">
                     <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500/20 to-amber-500/20 text-rose-400 mb-3 border border-rose-500/30 shadow-inner">
@@ -212,7 +245,7 @@
 
                     <p id="participant-error-msg" class="text-xs text-rose-400 hidden text-center bg-rose-950/60 border border-rose-800/80 p-2.5 rounded-xl font-medium"></p>
 
-                    <button type="submit" class="w-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-rose-900/40 transition transform hover:scale-[1.02] active:scale-95 text-sm tracking-wide">
+                    <button type="submit" id="participant-login-submit" class="w-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-rose-900/40 transition transform hover:scale-[1.02] active:scale-95 text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed">
                         Unlock My Match <i class="fa-solid fa-wand-magic-sparkles ml-1.5"></i>
                     </button>
                 </form>
@@ -236,7 +269,7 @@
 
                 <div class="perspective-1000 w-full max-w-xs mx-auto h-72 my-4 cursor-pointer group relative z-10" role="button" tabindex="0" aria-pressed="false" aria-label="Reveal Secret Santa assignment" onclick="toggleCardFlip()" onkeydown="handleCardKeydown(event)">
                     <div id="flip-card-inner" class="relative w-full h-full transform-style-3d transition-transform duration-700">
-                        
+
                         <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-rose-600 via-rose-700 to-amber-600 border-2 border-amber-300/40 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6 text-white glow-effect transition-all group-hover:scale-105">
                             <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4 border border-white/20 animate-bounce">
                                 <i class="fa-solid fa-gift text-4xl text-amber-300"></i>
@@ -244,7 +277,7 @@
                             <h4 class="font-black text-2xl tracking-wide drop-shadow">Secret Assignment</h4>
                             <p class="text-xs text-rose-100 mt-2 font-semibold bg-black/30 px-3 py-1 rounded-full border border-white/10">Click card to flip and reveal</p>
                         </div>
-                        
+
                         <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 border-2 border-amber-400 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6">
                             <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-800 px-3 py-1 rounded-full mb-3 border border-slate-700">Target Acquired</span>
                             <p class="text-xs text-slate-400 font-medium">You are gifting to:</p>
@@ -295,7 +328,7 @@
                         <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition transform hover:scale-105">Add</button>
                     </form>
 
-                    <button onclick="generateDraw()" id="draw-btn" class="w-full bg-gradient-to-r from-rose-600 via-amber-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition transform hover:scale-[1.01] active:scale-95">
+                    <button onclick="generateDraw()" id="draw-btn" class="w-full bg-gradient-to-r from-rose-600 via-amber-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-shuffle mr-1.5"></i> Generate Draw
                     </button>
                 </div>
@@ -333,21 +366,27 @@
                         </div>
                     </div>
 
-                    <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    </div>
+                    <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
                 </div>
             </div>
         </section>
 
     </main>
 
+    <div id="toast-container"></div>
+
     <footer class="border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md py-4 text-center text-[11px] text-slate-400">
         <p>GiftMatch Confidential Engine</p>
     </footer>
 
     <script>
+        // NOTE: this password check runs entirely in the browser, so anyone can
+        // read ORGANIZER_PASSWORD from view-source. Fine for a low-stakes office
+        // pool; if that matters, move this check behind a Cloud Function or
+        // Firestore security rule instead.
         const ORGANIZER_PASSWORD = "admin";
         const MAX_NAME_LENGTH = 80;
+        const DEFAULT_LOGIN_LIMIT = 2;
 
         let participantsList = [];
         let showMatchesToOrganizer = false;
@@ -355,15 +394,36 @@
         let currentUser = null;
         let isFlipped = false;
 
-        // Dynamic Spotlight Mouse Follower
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = message;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+
+        async function hashPassword(plainText) {
+            const bytes = new TextEncoder().encode(plainText);
+            const digest = await crypto.subtle.digest('SHA-256', bytes);
+            return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>'"]/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[character]));
+        }
+
         document.addEventListener('mousemove', (e) => {
-            const elements = document.querySelectorAll('.glass-panel');
-            elements.forEach(el => {
+            document.querySelectorAll('.glass-panel').forEach(el => {
                 const rect = el.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                el.style.setProperty('--mouse-x', `${x}px`);
-                el.style.setProperty('--mouse-y', `${y}px`);
+                el.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
             });
         });
 
@@ -377,80 +437,73 @@
         });
 
         function initRealtimeSync() {
-            window.fs.onSnapshot(window.fs.collection(window.db, "participants"), (snapshot) => {
-                participantsList = [];
-                snapshot.forEach(doc => {
-                    participantsList.push({ id: doc.id, ...doc.data() });
-                });
-                
-                renderRoster();
-                
-                if (currentUser) {
-                    const userData = participantsList.find(p => p.id === currentUser);
-                    if (userData) {
-                        const match = userData.giftingTo || "Draw not generated yet";
-                        document.getElementById('match-receiver-display').innerText = match;
-                        document.getElementById('login-count-badge').innerText = `Logins used: ${userData.logins}/${userData.loginLimit}`;
-                    }
+            window.fs.onSnapshot(
+                window.fs.collection(window.db, "participants"),
+                (snapshot) => {
+                    participantsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderRoster();
+                    refreshCurrentUserView();
+                },
+                (err) => {
+                    console.error(err);
+                    showToast("Lost connection to the roster. Refresh the page.");
                 }
-            });
+            );
+        }
+
+        function refreshCurrentUserView() {
+            if (!currentUser) return;
+            const userData = participantsList.find(p => p.id === currentUser);
+            if (!userData) return;
+            document.getElementById('match-receiver-display').innerText = userData.giftingTo || "Draw not generated yet";
+            document.getElementById('login-count-badge').innerText = `Logins used: ${userData.logins}/${userData.loginLimit}`;
         }
 
         function switchPortal(portal) {
-            const pPortal = document.getElementById('participant-portal');
-            const oPortal = document.getElementById('organizer-portal');
-            const pBtn = document.getElementById('nav-participant-btn');
-            const oBtn = document.getElementById('nav-organizer-btn');
-
-            if (portal === 'participant') {
-                pPortal.classList.remove('hidden');
-                oPortal.classList.add('hidden');
-                pBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110";
-                oBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition";
-            } else {
-                pPortal.classList.add('hidden');
-                oPortal.classList.remove('hidden');
-                oBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110";
-                pBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition";
-            }
+            document.getElementById('participant-portal').classList.toggle('hidden', portal !== 'participant');
+            document.getElementById('organizer-portal').classList.toggle('hidden', portal !== 'organizer');
+            document.getElementById('nav-participant-btn').classList.toggle('active', portal === 'participant');
+            document.getElementById('nav-organizer-btn').classList.toggle('active', portal === 'organizer');
         }
 
         function togglePasswordInput(inputId, iconId) {
             const input = document.getElementById(inputId);
             const icon = document.getElementById(iconId);
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
+            const nowVisible = input.type === 'password';
+            input.type = nowVisible ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !nowVisible);
+            icon.classList.toggle('fa-eye-slash', nowVisible);
+        }
+
+        function findParticipant(name) {
+            return participantsList.find(p => p.id.toLowerCase() === name.toLowerCase());
+        }
+
+        function showParticipantError(message) {
+            const errorMsg = document.getElementById('participant-error-msg');
+            errorMsg.innerText = message;
+            errorMsg.classList.remove('hidden');
         }
 
         async function handleForgotPassword() {
             const name = document.getElementById('participant-name-input').value.trim();
-            const errorMsg = document.getElementById('participant-error-msg');
-            
+            document.getElementById('participant-error-msg').classList.add('hidden');
+
             if (!name) {
-                errorMsg.innerText = "Please enter your full name first, then click 'Forgot password?'.";
-                errorMsg.classList.remove('hidden');
+                showParticipantError("Enter your full name first, then click 'Forgot password?'.");
                 return;
             }
 
-            const target = participantsList.find(p => p.id.toLowerCase() === name.toLowerCase());
+            const target = findParticipant(name);
             if (!target) {
-                errorMsg.innerText = "Name not found in participant roster.";
-                errorMsg.classList.remove('hidden');
+                showParticipantError("Name not found in participant roster.");
                 return;
             }
 
             if (!target.password) {
-                errorMsg.innerText = "You haven't set a password yet. Type any password to register.";
-                errorMsg.classList.remove('hidden');
+                showParticipantError("You haven't set a password yet — type any password to register one.");
             } else {
-                alert("Password request sent! Please contact the organizer to retrieve or reset your password.");
+                showToast("Ask the organizer to reset your password.", 'success');
             }
         }
 
@@ -458,61 +511,57 @@
             e.preventDefault();
             const nameInput = document.getElementById('participant-name-input').value.trim();
             const passInput = document.getElementById('participant-password-input').value;
-            const errorMsg = document.getElementById('participant-error-msg');
+            const submitBtn = document.getElementById('participant-login-submit');
 
-            errorMsg.classList.add('hidden');
+            document.getElementById('participant-error-msg').classList.add('hidden');
 
             if (!nameInput || nameInput.length > MAX_NAME_LENGTH || !passInput) {
-                errorMsg.innerText = `Enter a valid name and password. Names must be ${MAX_NAME_LENGTH} characters or fewer.`;
-                errorMsg.classList.remove('hidden');
+                showParticipantError(`Enter a valid name and password. Names must be ${MAX_NAME_LENGTH} characters or fewer.`);
                 return;
             }
 
-            const userData = participantsList.find(p => p.id.toLowerCase() === nameInput.toLowerCase());
+            const userData = findParticipant(nameInput);
             if (!userData) {
-                errorMsg.innerText = "Name not found in participant roster. Please ask organizer to add you.";
-                errorMsg.classList.remove('hidden');
+                showParticipantError("Name not found in participant roster. Ask the organizer to add you.");
                 return;
             }
 
-            const docRef = window.fs.doc(window.db, "participants", userData.id);
+            submitBtn.disabled = true;
+            try {
+                const docRef = window.fs.doc(window.db, "participants", userData.id);
+                const hashedInput = await hashPassword(passInput);
 
-            if (!userData.password) {
-                await window.fs.updateDoc(docRef, { password: passInput });
-                userData.password = passInput;
-            } else if (userData.password !== passInput) {
-                errorMsg.innerText = "Incorrect password for this account.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
+                if (!userData.password) {
+                    await window.fs.updateDoc(docRef, { password: hashedInput });
+                    userData.password = hashedInput;
+                } else if (userData.password !== hashedInput) {
+                    showParticipantError("Incorrect password for this account.");
+                    return;
+                }
 
-            const currentLogins = userData.logins || 0;
-            const allowedLimit = userData.loginLimit !== undefined ? userData.loginLimit : 2;
+                const currentLogins = userData.logins || 0;
+                const allowedLimit = userData.loginLimit ?? DEFAULT_LOGIN_LIMIT;
 
-            if (currentLogins >= allowedLimit) {
-                errorMsg.innerText = `Login limit reached (${currentLogins}/${allowedLimit}). Contact organizer for access.`;
-                errorMsg.classList.remove('hidden');
-                return;
-            }
+                if (currentLogins >= allowedLimit) {
+                    showParticipantError(`Login limit reached (${currentLogins}/${allowedLimit}). Contact the organizer for access.`);
+                    return;
+                }
 
-            await window.fs.updateDoc(docRef, { logins: currentLogins + 1 });
-            currentUser = userData.id;
+                await window.fs.updateDoc(docRef, { logins: currentLogins + 1 });
+                currentUser = userData.id;
 
-            document.getElementById('participant-login-card').classList.add('hidden');
-            document.getElementById('participant-dashboard').classList.remove('hidden');
-            document.getElementById('participant-greeting-name').innerText = currentUser;
-            document.getElementById('login-count-badge').innerText = `Logins used: ${currentLogins + 1}/${allowedLimit}`;
+                document.getElementById('participant-login-card').classList.add('hidden');
+                document.getElementById('participant-dashboard').classList.remove('hidden');
+                document.getElementById('participant-greeting-name').innerText = currentUser;
+                document.getElementById('login-count-badge').innerText = `Logins used: ${currentLogins + 1}/${allowedLimit}`;
+                document.getElementById('match-receiver-display').innerText = userData.giftingTo || "Draw not generated yet";
 
-            const receiver = userData.giftingTo || "Draw not generated yet";
-            document.getElementById('match-receiver-display').innerText = receiver;
-
-            // Trigger Confetti Effect on successful login!
-            if (typeof confetti === 'function') {
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 }
-                });
+                confetti?.({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } catch (err) {
+                console.error(err);
+                showParticipantError("Something went wrong logging you in. Try again.");
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
@@ -524,12 +573,8 @@
             card.setAttribute('aria-pressed', String(isFlipped));
             card.setAttribute('aria-label', isFlipped ? 'Hide Secret Santa assignment' : 'Reveal Secret Santa assignment');
 
-            if (isFlipped && typeof confetti === 'function') {
-                confetti({
-                    particleCount: 60,
-                    spread: 60,
-                    origin: { y: 0.5 }
-                });
+            if (isFlipped) {
+                confetti?.({ particleCount: 60, spread: 60, origin: { y: 0.5 } });
             }
         }
 
@@ -553,15 +598,15 @@
         function handleOrganizerLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('organizer-password-input').value;
-            if (pass === ORGANIZER_PASSWORD) {
-                document.getElementById('organizer-login-card').classList.add('hidden');
-                document.getElementById('organizer-console').classList.remove('hidden');
-                document.getElementById('show-matches-toggle').checked = showMatchesToOrganizer;
-                document.getElementById('show-passwords-toggle').checked = showPasswordsToOrganizer;
-                renderRoster();
-            } else {
-                alert("Incorrect organizer password.");
+            if (pass !== ORGANIZER_PASSWORD) {
+                showToast("Incorrect organizer password.");
+                return;
             }
+            document.getElementById('organizer-login-card').classList.add('hidden');
+            document.getElementById('organizer-console').classList.remove('hidden');
+            document.getElementById('show-matches-toggle').checked = showMatchesToOrganizer;
+            document.getElementById('show-passwords-toggle').checked = showPasswordsToOrganizer;
+            renderRoster();
         }
 
         function lockOrganizer() {
@@ -585,146 +630,148 @@
             const input = document.getElementById('new-participant-input');
             const name = input.value.trim().replace(/\s+/g, ' ');
 
+            if (!name) return;
+
             if (name.length > MAX_NAME_LENGTH) {
-                alert(`Participant names must be ${MAX_NAME_LENGTH} characters or fewer.`);
+                showToast(`Names must be ${MAX_NAME_LENGTH} characters or fewer.`);
                 return;
             }
 
-            const exists = participantsList.some(p => p.id.toLowerCase() === name.toLowerCase());
-            if (exists) {
-                alert("Participant already exists.");
+            if (findParticipant(name)) {
+                showToast("That participant already exists.");
                 return;
             }
 
-            if (name) {
+            try {
                 await window.fs.setDoc(window.fs.doc(window.db, "participants", name), {
-                    name: name,
+                    name,
                     logins: 0,
-                    loginLimit: 2,
+                    loginLimit: DEFAULT_LOGIN_LIMIT,
                     password: null,
                     giftingTo: null
                 });
                 input.value = '';
+            } catch (err) {
+                console.error(err);
+                showToast("Couldn't add that participant. Try again.");
             }
         }
 
         async function removeParticipant(name) {
-            await window.fs.deleteDoc(window.fs.doc(window.db, "participants", name));
-            
-            for (const p of participantsList) {
-                if (p.giftingTo === name) {
-                    await window.fs.updateDoc(window.fs.doc(window.db, "participants", p.id), {
-                        giftingTo: null
-                    });
-                }
+            if (!confirm(`Remove ${name} from the roster?`)) return;
+            try {
+                await window.fs.deleteDoc(window.fs.doc(window.db, "participants", name));
+                const assignedFrom = participantsList.filter(p => p.giftingTo === name);
+                await Promise.all(assignedFrom.map(p =>
+                    window.fs.updateDoc(window.fs.doc(window.db, "participants", p.id), { giftingTo: null })
+                ));
+            } catch (err) {
+                console.error(err);
+                showToast("Couldn't remove that participant.");
             }
         }
 
         async function resetUserPassword(name) {
-            await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), {
-                password: null
-            });
-            alert(`Password cleared for ${name}. They can now create a new password on login.`);
+            try {
+                await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), { password: null });
+                showToast(`Password cleared for ${name}.`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast("Couldn't reset that password.");
+            }
         }
 
         async function adjustLoginLimit(name, amount) {
             const target = participantsList.find(p => p.id === name);
-            if (target) {
-                const currentLimit = target.loginLimit !== undefined ? target.loginLimit : 2;
+            if (!target) return;
+            const currentLimit = target.loginLimit ?? DEFAULT_LOGIN_LIMIT;
+            try {
                 await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), {
                     loginLimit: Math.max(0, currentLimit + amount)
                 });
+            } catch (err) {
+                console.error(err);
+                showToast("Couldn't update the login limit.");
             }
         }
 
         async function generateDraw() {
             if (participantsList.length < 2) {
-                alert("Need at least 2 participants.");
+                showToast("Add at least 2 participants first.");
                 return;
             }
 
-            const names = participantsList.map(p => p.id);
-            const shift = 1 + Math.floor(Math.random() * (names.length - 1));
+            const drawBtn = document.getElementById('draw-btn');
+            drawBtn.disabled = true;
+            try {
+                const names = participantsList.map(p => p.id);
+                const shift = 1 + Math.floor(Math.random() * (names.length - 1));
 
-            for (let i = 0; i < names.length; i++) {
-                const giver = names[i];
-                const receiver = names[(i + shift) % names.length];
-                await window.fs.updateDoc(window.fs.doc(window.db, "participants", giver), {
-                    giftingTo: receiver
-                });
+                await Promise.all(names.map((giver, i) => {
+                    const receiver = names[(i + shift) % names.length];
+                    return window.fs.updateDoc(window.fs.doc(window.db, "participants", giver), { giftingTo: receiver });
+                }));
+
+                confetti?.({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+                showToast("Draw generated successfully.", 'success');
+            } catch (err) {
+                console.error(err);
+                showToast("Draw failed partway through — check the roster before re-running.");
+            } finally {
+                drawBtn.disabled = false;
             }
-
-            if (typeof confetti === 'function') {
-                confetti({
-                    particleCount: 150,
-                    spread: 100,
-                    origin: { y: 0.5 }
-                });
-            }
-
-            alert("Secret Santa draw generated successfully!");
-        }
-
-        function escapeHtml(value) {
-            return String(value).replace(/[&<>'"]/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;'
-            }[character]));
         }
 
         function renderRoster() {
             const list = document.getElementById('roster-list');
             if (!list) return;
-            list.innerHTML = '';
 
             if (participantsList.length === 0) {
                 list.innerHTML = `<p class="text-xs text-slate-500">No participants added.</p>`;
                 return;
             }
 
-            participantsList.forEach(item => {
+            list.innerHTML = participantsList.map(item => {
                 const name = item.id;
                 const used = item.logins || 0;
-                const allowed = item.loginLimit !== undefined ? item.loginLimit : 2;
+                const allowed = item.loginLimit ?? DEFAULT_LOGIN_LIMIT;
                 const assignedTo = item.giftingTo || 'Not drawn';
-                const userPass = item.password;
+                const hasPassword = Boolean(item.password);
 
                 const safeName = escapeHtml(name);
-                const safeAssignedTo = escapeHtml(assignedTo);
-                const safePassword = escapeHtml(userPass || 'None');
                 const encodedName = encodeURIComponent(name);
 
-                const matchInfoHtml = showMatchesToOrganizer 
-                    ? `<span class="text-[11px] text-amber-400 font-bold mr-2">Gifting: ${safeAssignedTo}</span>`
+                const matchInfoHtml = showMatchesToOrganizer
+                    ? `<span class="text-[11px] text-amber-400 font-bold mr-2">Gifting: ${escapeHtml(assignedTo)}</span>`
                     : '';
 
                 const passwordInfoHtml = showPasswordsToOrganizer
-                    ? `<span class="text-[11px] text-rose-300 font-mono bg-rose-950/80 border border-rose-800 px-2 py-0.5 rounded mr-2">Pass: ${safePassword}</span>`
+                    ? `<span class="text-[11px] text-rose-300 font-mono bg-rose-950/80 border border-rose-800 px-2 py-0.5 rounded mr-2">${hasPassword ? 'Password set' : 'No password'}</span>`
                     : '';
 
-                const row = document.createElement('div');
-                row.className = "interactive-hover flex items-center justify-between bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs transition";
-                row.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-200">${safeName}</span>
-                        ${userPass ? '<span class="text-[9px] bg-emerald-950/90 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">Registered</span>' : '<span class="text-[9px] bg-slate-900 text-slate-500 px-2 py-0.5 rounded-full font-semibold">Unregistered</span>'}
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${matchInfoHtml}
-                        ${passwordInfoHtml}
-                        <span class="text-[11px] text-slate-400 font-medium">Logins: ${used}/${allowed}</span>
-                        <div class="flex items-center gap-1">
-                            <button data-action="increase-limit" data-name="${encodedName}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl font-bold transition transform hover:scale-105">+1 Limit</button>
-                            ${userPass ? `<button data-action="reset-password" data-name="${encodedName}" class="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded-xl font-bold transition transform hover:scale-105">Reset</button>` : ''}
-                            <button data-action="remove" data-name="${encodedName}" class="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 text-rose-400 rounded-xl font-bold transition transform hover:scale-105">Remove</button>
+                const statusBadge = hasPassword
+                    ? '<span class="text-[9px] bg-emerald-950/90 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">Registered</span>'
+                    : '<span class="text-[9px] bg-slate-900 text-slate-500 px-2 py-0.5 rounded-full font-semibold">Unregistered</span>';
+
+                return `
+                    <div class="interactive-hover flex items-center justify-between bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs transition">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-200">${safeName}</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${matchInfoHtml}
+                            ${passwordInfoHtml}
+                            <span class="text-[11px] text-slate-400 font-medium">Logins: ${used}/${allowed}</span>
+                            <div class="flex items-center gap-1">
+                                <button data-action="increase-limit" data-name="${encodedName}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl font-bold transition transform hover:scale-105">+1 Limit</button>
+                                ${hasPassword ? `<button data-action="reset-password" data-name="${encodedName}" class="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded-xl font-bold transition transform hover:scale-105">Reset</button>` : ''}
+                                <button data-action="remove" data-name="${encodedName}" class="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 text-rose-400 rounded-xl font-bold transition transform hover:scale-105">Remove</button>
+                            </div>
                         </div>
                     </div>
                 `;
-                list.appendChild(row);
-            });
+            }).join('');
         }
 
         document.getElementById('roster-list').addEventListener('click', event => {
@@ -733,17 +780,25 @@
 
             const name = decodeURIComponent(button.dataset.name);
             switch (button.dataset.action) {
-                case 'increase-limit':
-                    adjustLoginLimit(name, 1);
-                    break;
-                case 'reset-password':
-                    resetUserPassword(name);
-                    break;
-                case 'remove':
-                    removeParticipant(name);
-                    break;
+                case 'increase-limit': adjustLoginLimit(name, 1); break;
+                case 'reset-password': resetUserPassword(name); break;
+                case 'remove': removeParticipant(name); break;
             }
         });
+
+        window.switchPortal = switchPortal;
+        window.togglePasswordInput = togglePasswordInput;
+        window.handleForgotPassword = handleForgotPassword;
+        window.handleParticipantLogin = handleParticipantLogin;
+        window.toggleCardFlip = toggleCardFlip;
+        window.handleCardKeydown = handleCardKeydown;
+        window.logoutParticipant = logoutParticipant;
+        window.handleOrganizerLogin = handleOrganizerLogin;
+        window.lockOrganizer = lockOrganizer;
+        window.toggleMatchVisibility = toggleMatchVisibility;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+        window.addParticipant = addParticipant;
+        window.generateDraw = generateDraw;
     </script>
 </body>
 </html>
