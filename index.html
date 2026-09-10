@@ -5,20 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secret Santa Portal</title>
     
-    <!-- Tailwind CSS CDN for utility-first styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome CDN for UI Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        /* Custom CSS properties for 3D card flip animation */
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
         
-        /* Global Background Styling with Image and Fallback Overlay */
         body {
             background-color: #020617; 
             background-image: url("./IMG_3673.JPG");
@@ -26,33 +22,98 @@
             background-position: center center;
             background-repeat: no-repeat;
             background-attachment: fixed;
+            overflow-x: hidden;
         }
 
-        /* Dark Backdrop Overlay for Contrast */
+        /* Animated Changing Background Gradient Overlay */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .bg-overlay {
-            background: rgba(2, 6, 23, 0.70);
-            backdrop-filter: blur(5px);
+            background: linear-gradient(-45deg, 
+                rgba(15, 23, 42, 0.88), 
+                rgba(136, 19, 55, 0.75), 
+                rgba(2, 6, 23, 0.9), 
+                rgba(20, 83, 45, 0.75)
+            );
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            backdrop-filter: blur(8px);
         }
 
-        /* Glassmorphism Styling for Cards and Panels */
+        /* Spotlight Glass Panel Effect */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.88);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* Interactive Spotlight Glow Effect on Hover */
+        .glass-panel::before, .spotlight-element::before {
+            content: '';
+            position: absolute;
+            top: var(--mouse-y, -100px);
+            left: var(--mouse-x, -100px);
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(244, 63, 94, 0.25) 0%, rgba(251, 191, 36, 0.1) 40%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .glass-panel:hover::before, .spotlight-element:hover::before {
+            opacity: 1;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(225, 29, 72, 0.25), 0 0 20px rgba(251, 191, 36, 0.15);
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 25px rgba(225, 29, 72, 0.5);
+        }
+
+        .glow-effect:hover {
+            box-shadow: 0 0 45px rgba(225, 29, 72, 0.8), 0 0 20px rgba(251, 191, 36, 0.5);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(4deg); }
+        }
+
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        /* Custom Interactive Spotlight for Inputs & Items */
+        .interactive-hover {
+            transition: all 0.2s ease;
+        }
+        .interactive-hover:hover {
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
+            transform: scale(1.01);
         }
     </style>
 
-    <!-- ================================================================= -->
-    <!-- FIREBASE MODULE SDK SETUP & INITIALIZATION                        -->
-    <!-- ================================================================= -->
     <script type="module">
-        // Import Firebase App core and Firestore module functions from official CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getFirestore, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Firebase Web App Configuration credentials retrieved from console
         const firebaseConfig = {
             apiKey: "AIzaSyB-KwaeH5vyfeLBJz748UOCwKFA_1pyCq4",
             authDomain: "secret-santa-d1ca8.firebaseapp.com",
@@ -63,177 +124,193 @@
             measurementId: "G-HZ0VJ60G4L"
         };
 
-        // Initialize Firebase Application Instance
         const app = initializeApp(firebaseConfig);
-        
-        // Initialize Firestore Cloud Database Instance
         const db = getFirestore(app);
 
-        // Expose Firebase Database tools to global `window` object 
-        // Allows non-module standard scripts to perform Firestore database queries
         window.db = db;
         window.fs = { doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, collection };
     </script>
 </head>
-<body class="text-slate-100 min-h-screen font-sans flex flex-col justify-between relative">
+<body class="text-slate-100 min-h-screen font-sans flex flex-col justify-between relative selection:bg-rose-500 selection:text-white">
 
-    <!-- Ambient Dark Overlay Filter -->
     <div class="fixed inset-0 bg-overlay -z-10"></div>
+    
+    <!-- Dynamic Floating Background Icons -->
+    <div class="fixed top-12 left-10 text-rose-500/20 text-9xl pointer-events-none -z-10 animate-float">
+        <i class="fa-solid fa-snowflake"></i>
+    </div>
+    <div class="fixed bottom-12 right-10 text-amber-500/20 text-9xl pointer-events-none -z-10 animate-float" style="animation-delay: -2s;">
+        <i class="fa-solid fa-gift"></i>
+    </div>
+    <div class="fixed top-1/3 right-16 text-emerald-500/15 text-7xl pointer-events-none -z-10 animate-float" style="animation-delay: -1s;">
+        <i class="fa-solid fa-tree"></i>
+    </div>
 
-    <!-- ================================================================= -->
-    <!-- NAVIGATION / HEADER SECTION                                       -->
-    <!-- ================================================================= -->
-    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+    <header class="border-b border-rose-900/40 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40">
         <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
-            <!-- App Logo & Title -->
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                    <i class="fa-solid fa-gift"></i>
+            <div class="flex items-center space-x-3 group cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-rose-900/50 group-hover:scale-110 transition duration-300">
+                    <i class="fa-solid fa-gift animate-bounce"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-base text-white tracking-tight">GiftMatch</h1>
-                    <p class="text-[11px] text-slate-400">Secret Santa Portal</p>
+                    <h1 class="font-black text-xl bg-gradient-to-r from-white via-rose-200 to-amber-300 bg-clip-text text-transparent tracking-tight">GiftMatch</h1>
+                    <p class="text-[10px] text-amber-400 font-bold tracking-widest uppercase flex items-center gap-1">
+                        <i class="fa-solid fa-sparkles text-[8px]"></i> Secret Santa Portal
+                    </p>
                 </div>
             </div>
 
-            <!-- Portal Switcher Buttons (Participant vs Organizer view) -->
-            <div class="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-                <button id="nav-participant-btn" onclick="switchPortal('participant')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition">
+            <div class="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+                <button id="nav-participant-btn" onclick="switchPortal('participant')" class="px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110">
                     Participant
                 </button>
-                <button id="nav-organizer-btn" onclick="switchPortal('organizer')" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                <button id="nav-organizer-btn" onclick="switchPortal('organizer')" class="px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition">
                     Organizer
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- ================================================================= -->
-    <!-- MAIN CONTENT CONTAINER                                            -->
-    <!-- ================================================================= -->
     <main class="max-w-4xl mx-auto px-4 py-8 w-full flex-grow flex flex-col justify-center">
 
-        <!-- ============================================================= -->
-        <!-- PARTICIPANT PORTAL SECTION                                    -->
-        <!-- ============================================================= -->
         <section id="participant-portal" class="max-w-md mx-auto w-full">
             
-            <!-- Participant Login/Registration Card -->
-            <div id="participant-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div id="participant-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl relative">
                 <div class="text-center mb-6">
-                    <h2 class="font-bold text-xl text-white">Participant Portal</h2>
-                    <p class="text-xs text-slate-400 mt-1">Set your password on first sign-in.</p>
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500/20 to-amber-500/20 text-rose-400 mb-3 border border-rose-500/30 shadow-inner">
+                        <i class="fa-solid fa-user-lock text-2xl animate-pulse"></i>
+                    </div>
+                    <h2 class="font-black text-2xl text-white tracking-wide">Welcome Back!</h2>
+                    <p class="text-xs text-slate-400 mt-1">First time? Create your secret password on sign-in.</p>
                 </div>
 
-                <!-- Form submitting to `handleParticipantLogin` -->
-                <form id="participant-login-form" onsubmit="handleParticipantLogin(event)" class="space-y-4">
+                <form id="participant-login-form" onsubmit="handleParticipantLogin(event)" class="space-y-4 relative z-10">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Your Full Name</label>
-                        <input type="text" id="participant-name-input" placeholder="e.g. Alice Vance" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Your Full Name</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-user text-sm"></i>
+                            </span>
+                            <input type="text" id="participant-name-input" placeholder="e.g. Alice Vance" required class="interactive-hover w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition">
+                        </div>
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
-                            <label class="block text-xs font-semibold text-slate-300">Your Personal Password</label>
-                            <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-rose-400 hover:underline">Forgot password?</button>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Personal Password</label>
+                            <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-amber-400 hover:text-amber-300 hover:underline transition font-semibold">Forgot password?</button>
                         </div>
-                        <input type="password" id="participant-password-input" placeholder="Create or enter password" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-key text-sm"></i>
+                            </span>
+                            <input type="password" id="participant-password-input" placeholder="Create or enter password" required class="interactive-hover w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition">
+                            <button type="button" onclick="togglePasswordInput('participant-password-input', 'participant-eye-icon')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white transition">
+                                <i id="participant-eye-icon" class="fa-solid fa-eye text-sm"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Dynamic Error Message Container -->
-                    <p id="participant-error-msg" class="text-xs text-rose-400 hidden text-center"></p>
+                    <p id="participant-error-msg" class="text-xs text-rose-400 hidden text-center bg-rose-950/60 border border-rose-800/80 p-2.5 rounded-xl font-medium"></p>
 
-                    <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition text-sm">
-                        Unlock My Match
+                    <button type="submit" class="w-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-rose-900/40 transition transform hover:scale-[1.02] active:scale-95 text-sm tracking-wide">
+                        Unlock My Match <i class="fa-solid fa-wand-magic-sparkles ml-1.5"></i>
                     </button>
                 </form>
             </div>
 
-            <!-- Participant Dashboard (Visible only after successful login) -->
-            <div id="participant-dashboard" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
-                <!-- User Status Bar -->
+            <div id="participant-dashboard" class="hidden glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
                     <div class="text-left">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Authenticated As</p>
-                        <h3 id="participant-greeting-name" class="text-sm font-bold text-white"></h3>
+                        <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Authenticated As</p>
+                        <h3 id="participant-greeting-name" class="text-base font-black text-rose-400"></h3>
                     </div>
                     <div class="text-right">
-                        <span id="login-count-badge" class="text-[10px] bg-slate-800 text-amber-400 border border-slate-700 px-2 py-1 rounded-lg block mb-1">
+                        <span id="login-count-badge" class="text-[10px] bg-slate-900/90 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full font-bold inline-block mb-1 shadow-inner">
                             Logins used: 0
                         </span>
-                        <button onclick="logoutParticipant()" class="text-xs text-slate-400 hover:text-white underline">Exit</button>
+                        <div>
+                            <button onclick="logoutParticipant()" class="text-xs text-slate-400 hover:text-rose-400 transition underline font-medium">Exit Portal</button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 3D Flip Card Element for Reveal Effect -->
-                <div class="perspective-1000 w-full max-w-xs mx-auto h-64 my-4 cursor-pointer" role="button" tabindex="0" aria-pressed="false" aria-label="Reveal Secret Santa assignment" onclick="toggleCardFlip()" onkeydown="handleCardKeydown(event)">
+                <div class="perspective-1000 w-full max-w-xs mx-auto h-72 my-4 cursor-pointer group relative z-10" role="button" tabindex="0" aria-pressed="false" aria-label="Reveal Secret Santa assignment" onclick="toggleCardFlip()" onkeydown="handleCardKeydown(event)">
                     <div id="flip-card-inner" class="relative w-full h-full transform-style-3d transition-transform duration-700">
-                        <!-- Card Front (Unrevealed State) -->
-                        <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-rose-600 to-rose-900 border border-rose-400/30 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 text-white">
-                            <i class="fa-solid fa-gift text-5xl mb-3 text-amber-300"></i>
-                            <h4 class="font-bold text-lg">Secret Assignment</h4>
-                            <p class="text-xs text-rose-200 mt-2">Click card to flip and reveal</p>
+                        
+                        <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-rose-600 via-rose-700 to-amber-600 border-2 border-amber-300/40 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6 text-white glow-effect transition-all group-hover:scale-105">
+                            <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4 border border-white/20 animate-bounce">
+                                <i class="fa-solid fa-gift text-4xl text-amber-300"></i>
+                            </div>
+                            <h4 class="font-black text-2xl tracking-wide drop-shadow">Secret Assignment</h4>
+                            <p class="text-xs text-rose-100 mt-2 font-semibold bg-black/30 px-3 py-1 rounded-full border border-white/10">Click card to flip and reveal</p>
                         </div>
-                        <!-- Card Back (Revealed State) -->
-                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 border border-slate-700 rounded-2xl shadow-xl flex flex-col items-center justify-center p-6">
-                            <p class="text-xs text-slate-400">You are gifting to:</p>
-                            <h3 id="match-receiver-display" class="text-2xl font-black text-amber-400 my-2">---</h3>
-                            <p class="text-[10px] text-slate-500 mt-2">
-                                <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> Keep it confidential!
+                        
+                        <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 border-2 border-amber-400 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-800 px-3 py-1 rounded-full mb-3 border border-slate-700">Target Acquired</span>
+                            <p class="text-xs text-slate-400 font-medium">You are gifting to:</p>
+                            <h3 id="match-receiver-display" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500 my-3 drop-shadow">---</h3>
+                            <p class="text-[11px] text-slate-300 mt-2 bg-emerald-950/60 border border-emerald-800/60 px-3.5 py-1.5 rounded-xl font-medium">
+                                <i class="fa-solid fa-user-secret text-emerald-400 mr-1.5"></i> Keep it top secret!
                             </p>
                         </div>
+
                     </div>
                 </div>
             </div>
 
         </section>
 
-        <!-- ============================================================= -->
-        <!-- ORGANIZER PORTAL SECTION                                      -->
-        <!-- ============================================================= -->
         <section id="organizer-portal" class="hidden max-w-2xl mx-auto w-full">
-            <!-- Admin Login Card -->
-            <div id="organizer-login-card" class="glass-panel rounded-3xl p-6 shadow-2xl max-w-md mx-auto">
+            <div id="organizer-login-card" class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl max-w-md mx-auto">
                 <div class="text-center mb-6">
-                    <h2 class="font-bold text-xl text-white">Organizer Dashboard</h2>
-                    <p class="text-xs text-slate-400 mt-1">Administrative login</p>
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 mb-3 border border-emerald-500/30">
+                        <i class="fa-solid fa-shield-halved text-2xl"></i>
+                    </div>
+                    <h2 class="font-black text-2xl text-white">Organizer Control</h2>
+                    <p class="text-xs text-slate-400 mt-1">Authorized personnel login</p>
                 </div>
                 <form onsubmit="handleOrganizerLogin(event)" class="space-y-4">
-                    <input type="password" id="organizer-password-input" placeholder="Enter organizer password" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition text-sm">
-                        Access Control Panel
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-lock text-sm"></i>
+                        </span>
+                        <input type="password" id="organizer-password-input" placeholder="Enter organizer password" required class="interactive-hover w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition">
+                        <button type="button" onclick="togglePasswordInput('organizer-password-input', 'organizer-eye-icon')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white transition">
+                            <i id="organizer-eye-icon" class="fa-solid fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-950/50 transition transform hover:scale-[1.02] active:scale-95 text-sm">
+                        Access Control Panel <i class="fa-solid fa-arrow-right ml-1"></i>
                     </button>
                 </form>
             </div>
 
-            <!-- Organizer Console (Visible upon correct password) -->
             <div id="organizer-console" class="hidden space-y-6">
-                <!-- Add Participant & Generate Draw Control -->
-                <div class="glass-panel rounded-2xl p-5 shadow-xl">
-                    <h3 class="font-bold text-sm text-white mb-3">Roster Management</h3>
+                <div class="glass-panel rounded-3xl p-6 shadow-2xl">
+                    <h3 class="font-bold text-base text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-rose-400"></i> Roster Management
+                    </h3>
                     <form onsubmit="addParticipant(event)" class="flex gap-2 mb-4">
-                        <input type="text" id="new-participant-input" placeholder="Participant Name" required class="flex-grow bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
-                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-xs">Add</button>
+                        <input type="text" id="new-participant-input" placeholder="Participant Name" required class="interactive-hover flex-grow bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none transition">
+                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition transform hover:scale-105">Add</button>
                     </form>
 
-                    <button onclick="generateDraw()" id="draw-btn" class="w-full bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-semibold py-2.5 rounded-xl text-xs shadow-lg">
-                        Generate Draw
+                    <button onclick="generateDraw()" id="draw-btn" class="w-full bg-gradient-to-r from-rose-600 via-amber-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition transform hover:scale-[1.01] active:scale-95">
+                        <i class="fa-solid fa-shuffle mr-1.5"></i> Generate Draw
                     </button>
                 </div>
 
-                <!-- Admin Roster Management List -->
-                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                <div class="glass-panel rounded-3xl p-6 shadow-2xl">
                     <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
                         <div>
-                            <h3 class="font-bold text-sm text-white">Participant Roster</h3>
-                            <p class="text-[11px] text-slate-400">Manage access limits and passwords</p>
+                            <h3 class="font-bold text-base text-white">Participant Roster</h3>
+                            <p class="text-[11px] text-slate-400">Manage access limits and view details</p>
                         </div>
-                        <button onclick="lockOrganizer()" class="text-xs text-slate-400 hover:text-white underline">Lock Panel</button>
+                        <button onclick="lockOrganizer()" class="text-xs text-rose-400 hover:text-rose-300 font-bold transition bg-rose-950/40 border border-rose-800/50 px-3 py-1.5 rounded-xl hover:bg-rose-900/60">Lock Panel</button>
                     </div>
 
-                    <!-- Admin Visibility Toggles -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                        <!-- Match Revealer Toggle -->
-                        <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div class="interactive-hover flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-2xl">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-eye text-amber-400 text-xs"></i>
                                 <span class="text-xs font-semibold text-slate-200">Show Matches</span>
@@ -244,8 +321,7 @@
                             </label>
                         </div>
 
-                        <!-- Password Revealer Toggle -->
-                        <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                        <div class="interactive-hover flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 rounded-2xl">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-key text-rose-400 text-xs"></i>
                                 <span class="text-xs font-semibold text-slate-200">Show Passwords</span>
@@ -257,9 +333,7 @@
                         </div>
                     </div>
 
-                    <!-- Dynamic Roster Target Container -->
-                    <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto">
-                        <!-- Content dynamically generated from Firestore by `renderRoster()` -->
+                    <div id="roster-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
                     </div>
                 </div>
             </div>
@@ -267,29 +341,32 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md py-4 text-center text-[11px] text-slate-400">
         <p>GiftMatch Confidential Engine</p>
     </footer>
 
-    <!-- ================================================================= -->
-    <!-- APPLICATION LOGIC & FIRESTORE DATABASE CONTROLLER                 -->
-    <!-- ================================================================= -->
     <script>
-        // Global Constants
-        const ORGANIZER_PASSWORD = "admin"; // Admin access key
-        const MAX_NAME_LENGTH = 80;        // Security length check for participant names
+        const ORGANIZER_PASSWORD = "admin";
+        const MAX_NAME_LENGTH = 80;
 
-        // Application State
-        let participantsList = [];          // Local cache synchronized with Firestore
-        let showMatchesToOrganizer = false; // State toggle for admin match view
-        let showPasswordsToOrganizer = false;// State toggle for admin password view
-        let currentUser = null;             // Active logged-in participant ID
-        let isFlipped = false;               // Visual state for 3D card animation
+        let participantsList = [];
+        let showMatchesToOrganizer = false;
+        let showPasswordsToOrganizer = false;
+        let currentUser = null;
+        let isFlipped = false;
 
-        /**
-         * Initialize real-time synchronization once Firebase SDK finishes loading.
-         */
+        // Dynamic Spotlight Mouse Follower
+        document.addEventListener('mousemove', (e) => {
+            const elements = document.querySelectorAll('.glass-panel');
+            elements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                el.style.setProperty('--mouse-x', `${x}px`);
+                el.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
             const checkFirebase = setInterval(() => {
                 if (window.db && window.fs) {
@@ -299,10 +376,6 @@
             }, 100);
         });
 
-        /**
-         * Attaches a real-time Firestore listener (`onSnapshot`) to the `participants` collection.
-         * Whenever data changes in the cloud, all connected browser clients automatically update instantly.
-         */
         function initRealtimeSync() {
             window.fs.onSnapshot(window.fs.collection(window.db, "participants"), (snapshot) => {
                 participantsList = [];
@@ -310,10 +383,8 @@
                     participantsList.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Re-render admin UI controls
                 renderRoster();
                 
-                // Update active user dashboard data in real-time if logged in
                 if (currentUser) {
                     const userData = participantsList.find(p => p.id === currentUser);
                     if (userData) {
@@ -325,9 +396,6 @@
             });
         }
 
-        /**
-         * Switches active navigation tab between Participant and Organizer portals.
-         */
         function switchPortal(portal) {
             const pPortal = document.getElementById('participant-portal');
             const oPortal = document.getElementById('organizer-portal');
@@ -337,19 +405,30 @@
             if (portal === 'participant') {
                 pPortal.classList.remove('hidden');
                 oPortal.classList.add('hidden');
-                pBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition";
-                oBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                pBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110";
+                oBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition";
             } else {
                 pPortal.classList.add('hidden');
                 oPortal.classList.remove('hidden');
-                oBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white transition";
-                pBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                oBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white transition shadow-lg hover:brightness-110";
+                pBtn.className = "px-4 py-1.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition";
             }
         }
 
-        /**
-         * Forgot Password handling for participants.
-         */
+        function togglePasswordInput(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
         async function handleForgotPassword() {
             const name = document.getElementById('participant-name-input').value.trim();
             const errorMsg = document.getElementById('participant-error-msg');
@@ -375,9 +454,6 @@
             }
         }
 
-        /**
-         * Handles authentication, password registration, and access limits for participants.
-         */
         async function handleParticipantLogin(e) {
             e.preventDefault();
             const nameInput = document.getElementById('participant-name-input').value.trim();
@@ -386,14 +462,12 @@
 
             errorMsg.classList.add('hidden');
 
-            // Sanity & input length checks
             if (!nameInput || nameInput.length > MAX_NAME_LENGTH || !passInput) {
                 errorMsg.innerText = `Enter a valid name and password. Names must be ${MAX_NAME_LENGTH} characters or fewer.`;
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            // Verify user exists in roster cache
             const userData = participantsList.find(p => p.id.toLowerCase() === nameInput.toLowerCase());
             if (!userData) {
                 errorMsg.innerText = "Name not found in participant roster. Please ask organizer to add you.";
@@ -403,7 +477,6 @@
 
             const docRef = window.fs.doc(window.db, "participants", userData.id);
 
-            // Register password on first login attempt
             if (!userData.password) {
                 await window.fs.updateDoc(docRef, { password: passInput });
                 userData.password = passInput;
@@ -413,7 +486,6 @@
                 return;
             }
 
-            // Login attempt limit checks
             const currentLogins = userData.logins || 0;
             const allowedLimit = userData.loginLimit !== undefined ? userData.loginLimit : 2;
 
@@ -423,11 +495,9 @@
                 return;
             }
 
-            // Increment login counter in Firestore Cloud Database
             await window.fs.updateDoc(docRef, { logins: currentLogins + 1 });
             currentUser = userData.id;
 
-            // Update UI views
             document.getElementById('participant-login-card').classList.add('hidden');
             document.getElementById('participant-dashboard').classList.remove('hidden');
             document.getElementById('participant-greeting-name').innerText = currentUser;
@@ -435,11 +505,17 @@
 
             const receiver = userData.giftingTo || "Draw not generated yet";
             document.getElementById('match-receiver-display').innerText = receiver;
+
+            // Trigger Confetti Effect on successful login!
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
         }
 
-        /**
-         * Toggles the CSS 3D transformation for the secret assignment reveal card.
-         */
         function toggleCardFlip() {
             const card = document.querySelector('.perspective-1000');
             const cardInner = document.getElementById('flip-card-inner');
@@ -447,11 +523,16 @@
             cardInner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
             card.setAttribute('aria-pressed', String(isFlipped));
             card.setAttribute('aria-label', isFlipped ? 'Hide Secret Santa assignment' : 'Reveal Secret Santa assignment');
+
+            if (isFlipped && typeof confetti === 'function') {
+                confetti({
+                    particleCount: 60,
+                    spread: 60,
+                    origin: { y: 0.5 }
+                });
+            }
         }
 
-        /**
-         * Keyboard accessibility handler for 3D card flip action.
-         */
         function handleCardKeydown(event) {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
@@ -459,9 +540,6 @@
             }
         }
 
-        /**
-         * Log out the active participant and return to login screen.
-         */
         function logoutParticipant() {
             currentUser = null;
             isFlipped = false;
@@ -472,9 +550,6 @@
             document.getElementById('participant-password-input').value = '';
         }
 
-        /**
-         * Authenticate organizer control panel access.
-         */
         function handleOrganizerLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('organizer-password-input').value;
@@ -489,34 +564,22 @@
             }
         }
 
-        /**
-         * Lock organizer control panel.
-         */
         function lockOrganizer() {
             document.getElementById('organizer-login-card').classList.remove('hidden');
             document.getElementById('organizer-console').classList.add('hidden');
             document.getElementById('organizer-password-input').value = '';
         }
 
-        /**
-         * Toggle visibility of participant assignments in organizer view.
-         */
         function toggleMatchVisibility(checked) {
             showMatchesToOrganizer = checked;
             renderRoster();
         }
 
-        /**
-         * Toggle visibility of participant passwords in organizer view.
-         */
         function togglePasswordVisibility(checked) {
             showPasswordsToOrganizer = checked;
             renderRoster();
         }
 
-        /**
-         * Writes a new participant document into Firestore database.
-         */
         async function addParticipant(e) {
             e.preventDefault();
             const input = document.getElementById('new-participant-input');
@@ -534,7 +597,6 @@
             }
 
             if (name) {
-                // Write new document to Cloud Firestore
                 await window.fs.setDoc(window.fs.doc(window.db, "participants", name), {
                     name: name,
                     logins: 0,
@@ -546,14 +608,9 @@
             }
         }
 
-        /**
-         * Deletes a participant document from Firestore and clears related match assignments.
-         */
         async function removeParticipant(name) {
-            // Delete participant document from Cloud Firestore
             await window.fs.deleteDoc(window.fs.doc(window.db, "participants", name));
             
-            // Clean up assignment reference if someone was matched to the deleted participant
             for (const p of participantsList) {
                 if (p.giftingTo === name) {
                     await window.fs.updateDoc(window.fs.doc(window.db, "participants", p.id), {
@@ -563,9 +620,6 @@
             }
         }
 
-        /**
-         * Clears a participant's password in Firestore so they can set a new one.
-         */
         async function resetUserPassword(name) {
             await window.fs.updateDoc(window.fs.doc(window.db, "participants", name), {
                 password: null
@@ -573,9 +627,6 @@
             alert(`Password cleared for ${name}. They can now create a new password on login.`);
         }
 
-        /**
-         * Increases a participant's allowed login limit in Firestore.
-         */
         async function adjustLoginLimit(name, amount) {
             const target = participantsList.find(p => p.id === name);
             if (target) {
@@ -586,10 +637,6 @@
             }
         }
 
-        /**
-         * Generates Secret Santa draw mapping using a circular shift algorithm,
-         * updating every participant's document in Cloud Firestore.
-         */
         async function generateDraw() {
             if (participantsList.length < 2) {
                 alert("Need at least 2 participants.");
@@ -597,10 +644,8 @@
             }
 
             const names = participantsList.map(p => p.id);
-            // Derive a random shift distance guaranteed not to match a person to themselves
             const shift = 1 + Math.floor(Math.random() * (names.length - 1));
 
-            // Assign every participant their shifted recipient
             for (let i = 0; i < names.length; i++) {
                 const giver = names[i];
                 const receiver = names[(i + shift) % names.length];
@@ -609,12 +654,17 @@
                 });
             }
 
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.5 }
+                });
+            }
+
             alert("Secret Santa draw generated successfully!");
         }
 
-        /**
-         * Sanitizes string output against Cross-Site Scripting (XSS) vulnerabilities.
-         */
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, character => ({
                 '&': '&amp;',
@@ -625,9 +675,6 @@
             }[character]));
         }
 
-        /**
-         * Dynamic DOM renderer for Organizer Participant Roster table.
-         */
         function renderRoster() {
             const list = document.getElementById('roster-list');
             if (!list) return;
@@ -638,7 +685,6 @@
                 return;
             }
 
-            // Loop through active cache and construct UI elements
             participantsList.forEach(item => {
                 const name = item.id;
                 const used = item.logins || 0;
@@ -652,28 +698,28 @@
                 const encodedName = encodeURIComponent(name);
 
                 const matchInfoHtml = showMatchesToOrganizer 
-                    ? `<span class="text-[11px] text-amber-400 font-medium mr-2">Gifting: ${safeAssignedTo}</span>`
+                    ? `<span class="text-[11px] text-amber-400 font-bold mr-2">Gifting: ${safeAssignedTo}</span>`
                     : '';
 
                 const passwordInfoHtml = showPasswordsToOrganizer
-                    ? `<span class="text-[11px] text-rose-300 font-mono bg-rose-950/60 border border-rose-800/80 px-2 py-0.5 rounded mr-2">Pass: ${safePassword}</span>`
+                    ? `<span class="text-[11px] text-rose-300 font-mono bg-rose-950/80 border border-rose-800 px-2 py-0.5 rounded mr-2">Pass: ${safePassword}</span>`
                     : '';
 
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-xs";
+                row.className = "interactive-hover flex items-center justify-between bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs transition";
                 row.innerHTML = `
                     <div class="flex items-center gap-2">
-                        <span class="font-medium text-slate-200">${safeName}</span>
-                        ${userPass ? '<span class="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">Set</span>' : '<span class="text-[9px] bg-slate-900 text-slate-500 px-1.5 py-0.5 rounded">Unregistered</span>'}
+                        <span class="font-bold text-slate-200">${safeName}</span>
+                        ${userPass ? '<span class="text-[9px] bg-emerald-950/90 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">Registered</span>' : '<span class="text-[9px] bg-slate-900 text-slate-500 px-2 py-0.5 rounded-full font-semibold">Unregistered</span>'}
                     </div>
                     <div class="flex items-center gap-2">
                         ${matchInfoHtml}
                         ${passwordInfoHtml}
-                        <span class="text-[11px] text-slate-400">Logins: ${used}/${allowed}</span>
+                        <span class="text-[11px] text-slate-400 font-medium">Logins: ${used}/${allowed}</span>
                         <div class="flex items-center gap-1">
-                            <button data-action="increase-limit" data-name="${encodedName}" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded">+1 Limit</button>
-                            ${userPass ? `<button data-action="reset-password" data-name="${encodedName}" class="px-2 py-0.5 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded">Reset</button>` : ''}
-                            <button data-action="remove" data-name="${encodedName}" class="px-2 py-0.5 bg-rose-950 hover:bg-rose-900 text-rose-400 rounded">Remove</button>
+                            <button data-action="increase-limit" data-name="${encodedName}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl font-bold transition transform hover:scale-105">+1 Limit</button>
+                            ${userPass ? `<button data-action="reset-password" data-name="${encodedName}" class="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded-xl font-bold transition transform hover:scale-105">Reset</button>` : ''}
+                            <button data-action="remove" data-name="${encodedName}" class="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 text-rose-400 rounded-xl font-bold transition transform hover:scale-105">Remove</button>
                         </div>
                     </div>
                 `;
@@ -681,9 +727,6 @@
             });
         }
 
-        /**
-         * Event Delegation Handler for participant action buttons in Organizer Roster list.
-         */
         document.getElementById('roster-list').addEventListener('click', event => {
             const button = event.target.closest('button[data-action]');
             if (!button) return;
